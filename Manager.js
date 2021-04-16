@@ -1,31 +1,42 @@
-const parse = (body) => body.json()
+const parse = async (res) => {
+  const body = await res.text()
+  if(body) {
+    try {
+      return JSON.parse(body)
+    } catch(e) {
+      return {}
+    }
+  }  
+
+  return {}
+}
 
 class Manager {
-  #uri: string
+  #uri = ""
 
-  constructor(uri: string) {
+  constructor(uri) {
     this.#uri = uri
   }
 
-  setKey(key: string, value: string) {
+  setKey(key, value) {
     return fetch(`${this.#uri}?${key}=${value}`, {
       method: "POST"
     }).then(parse)
   }
 
-  getKey(key: string) {
+  getKey(key) {
     return fetch(`${this.#uri}/${key}`, {
       method: "GET"
     }).then(parse)
   }
 
-  deleteKey(key: string) {
+  deleteKey(key) {
     return fetch(`${this.#uri}/${key}`, {
       method: "DELETE"
     }).then(parse)
   }
 
-  listAll(prefix: string) {
+  listAll(prefix) {
     return fetch(`${this.#uri}?prefix=${prefix}`, {
       method: "POST"
     }).then(parse)
