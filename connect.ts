@@ -1,81 +1,37 @@
-import Manager from "./db.ts"
+import Manager from "./Manager.ts"
 
-interface Document {
-  version: number
-  content: string
-}
+const connect = (uri: (string | undefined)) => {
+  const defaultConnection = Deno.env.get("REPLIT_DB_URL")
+  const _uri = uri || defaultConnection
 
-class Database {
-  #uri: string
-  manager: Manager
-
-  connect(uri: (string | undefined)) {
-    const defaultConnection = Deno.env.get("REPLIT_DB_URL")
-    
-    if(!uri && !defaultConnection) {
-      throw new Error("please provide a replit db connection URI")
-    }
-
-    this.#uri = uri || defaultConnection
-    this.manager = new Manager(this.#uri)
+  if(!_uri) {
+    throw new Error("please provide a replit db connection URI")
   }
 
-  collection(name: string) {
-    return createCollection(name, this.manager)
-  }
+  const manager = new Manager(_uri)
+  return createProxy(manager)
 }
 
-const createCollection = (name, manager) => {
-  const handle = {
-    get(obj, key) {
-      return obj.hasOwnProperty(key)
-        ? obj[key]
-        : manager.getKey(key)
-    }
-  } 
+const createProxy = (manager) => {
+    const handle = {
+      get(obj, key) {
+        return key in obj 
+          ? obj[key]
+          : manager.getKey(key)
+      }
 
-  return new Proxy({}, handle)
-}
+      set(obj, key, value) {
+        obj[key] = value
+        return manager.setKey(key, JSON.stringify(value))
+      }
 
-const connect = async (uri = defaultConn) => {
-  if(!uri) {
-    throw new Error("please provide a replit db connection string")
-  }
-
-  const manager = new Manager(uri)
-  
-  const store = {}
-  const handle = {
-    async get(obj, key) {
-      const exists = obj.hasOwnProperty(key)
-
-      const body = await manager.getKey(key)
-      // const body = await fetch(`${uri}/${key}`)
-        // .then(res => res.text())
-
-      if(exists) {
-
+      delete(obj, key) {
+        delete obj[key]
+        return manager.deleteKey(key)
       }
     }
-  }
 
-  return new Proxy(store, handle)
+    return new Proxy({}, handle)
 }
 
 export default connect
-
-/*
-
-  get: function (target, prop, receiver) {
-    if (prop === "message2") {
-      return "world";
-    }
-    return Reflect.get(...arguments);
-  },
-
-
-const client = await connect(uri)
-
-const db = client.collection("repl-db")
-
- */
