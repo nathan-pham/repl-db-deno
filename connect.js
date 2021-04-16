@@ -12,23 +12,38 @@ const connect = (url=defaultConnection) => {
 }
 
 const createProxy = (manager) => {
-    const handle = {
-      get(obj, key) {
-        return key in obj 
-          ? obj[key]
-          : manager.getKey(key)
-      },
-      delete(obj, key) {
-        delete obj[key]
-        return manager.deleteKey(key)
-      },
-      set(obj, key, value) {
-        obj[key] = value
-        return manager.setKey(key, JSON.stringify(value))
+  const handle = {
+    get(obj, key) {
+      if(key === "keys") {
+        return () => manager.listAll()
       }
-    }
 
-    return new Proxy({}, handle)
+      return key in obj && Object.keys(obj[key]).length
+        ? obj[key]
+        : manager.getKey(key)
+    },
+    deleteProperty(obj, key) {
+      if(key === "keys" || !key in obj) {
+        throw new Error("invalid key")
+      }
+
+      console.log(key)
+
+      delete obj[key]
+      return manager.deleteKey(key)
+    },
+    async set(obj, key, value) {
+      if(key === "keys" || !key in obj) {
+        throw new Error("invalid key")
+      }
+
+      obj[key] = value
+      return manager.setKey(key, JSON.stringify(value))
+    }
+  }
+
+  const proxy = new Proxy({}, handle)
+  return proxy
 }
 
 export default connect

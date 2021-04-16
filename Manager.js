@@ -1,14 +1,13 @@
-const parse = async (res) => {
+const parse = async (res, keys) => {
   const body = await res.text()
-  if(body) {
-    try {
-      return JSON.parse(body)
-    } catch(e) {
-      return {}
-    }
-  }  
 
-  return {}
+  try {
+    return keys
+      ? body.split('\n').filter(v => v.length) || []
+      : JSON.parse(body)
+  } catch(e) {
+    return {}
+  }
 }
 
 class Manager {
@@ -36,10 +35,10 @@ class Manager {
     }).then(parse)
   }
 
-  listAll(prefix) {
+  listAll(prefix='') {
     return fetch(`${this.#uri}?prefix=${prefix}`, {
-      method: "POST"
-    }).then(parse)
+      method: "GET"
+    }).then((res) => parse(res, true))
   }
 }
 
